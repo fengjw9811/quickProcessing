@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>quickProcessing</title>
+    <style>
+        body {
+            background-color: rgb(204, 204, 204, .4);
+        }
+
+        .dropbtn {
+            background-color: rgb(89, 172, 236);
+            color: white;
+            padding: 60px;
+            font-size: 30px;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            margin-right: 100px;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            width: 100px;
+            height: 50px;
+            background-color: #f4606c;
+            float: right;
+            margin-right: 70px;
+            margin-top: 60px;
+            text-align: center;
+            line-height: 30px;
+        }
+
+        .close:active {
+            background-color: rgb(89, 172, 236);
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown:hover .dropbtn {
+            background-color: #157aec;
+        }
+
+        .main {
+            width: 900px;
+            height: 700px;
+            float: right;
+            margin-top: 50px;
+            background-color: pink;
+        }
+
+        .hideSplitLine {
+            margin-top: 40px;
+            float: right;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dropdown">
+        <button class="dropbtn">PE</button>
+        <div class="dropdown-content">
+            <a href="#" class="document">生成目标文件</a>
+            <a href="#" class="image1">自适应坐标绘图</a>
+            <a href="#" class="image2">定坐标绘图</a>
+        </div>
+    </div>
+
+    <div class="dropdown">
+        <button class="dropbtn">ECE</button>
+        <div class="dropdown-content">
+            <a href="#" class="ece">选择文件</a>
+        </div>
+    </div>
+
+    <div class="dropdown">
+        <button class="dropbtn">KT</button>
+        <div class="dropdown-content">
+            <a href="#" class="kt">选择文件</a>
+        </div>
+    </div>
+    <button class="hideSplitLine">Hide Splitline</button>
+    <button class="close">Close Image</button>
+
+    <div class="main"></div>
+    <script>
+        const fs = require('fs')
+        const path = require('path')
+        const echarts = require('echarts')
+        const {
+            dialog
+        } = require('@electron/remote')
+        const doc = document.querySelector('.document')
+        const img1 = document.querySelector('.image1')
+        const img2 = document.querySelector('.image2')
+        const hide = document.querySelector('.hideSplitLine')
+        const close = document.querySelector('.close')
+        const main = document.querySelector('.main')
+        const ece = document.querySelector('.ece')
+        const kt = document.querySelector('.kt')
+        const colorDefault = ['black', 'red', 'blue', 'magenta', 'olive', 'navy', 'violet', 'purple', 'wine', 'darkyellow', '#2b63a2', '#1e9696', '#9b641a', '#10c73e', '#b9247a', '#2dc5cc', '#3f4198', '#93ac2b', '#808080', '#966464']
+        var splitFlag = true
+        var myChart
+        var option = {
+            color: colorDefault,
+            backgroundColor: '#fff',
+            grid: {
+                left: 110,
+                bottom: 90,
+            },
+            xAxis: [{
+                position: "bottom",
+                max: function (value) {
+                    return (value.max - value.min) * 0.12 + value.max
+                },
+                min: function (value) {
+                    return (value.min - value.max) * 0.12 - value.max
+                },
+                type: 'value',
+                scale: true,
+                name: 'Electric Filed (MV/m)',
+                nameLocation: 'center',
+                nameTextStyle: {
+                    color: 'black',
+                    fontFamily: 'Arial',
+                    fontWeight: 'bold',
+                    fontSize: 25,
+                    lineHeight: 70,
+                },
+                splitNumber: 6,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        type: 'dashed',
+                        color: '#848484',
+                    }
+                },
+                axisLine: {
+                    onZero: false,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    },
+                },
+                axisTick: {
+                    show: true,
+                    inside: true,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    }
+                },
+                minorTick: {
+                    show: true,
+                    splitNumber: 2,
+                    lineStyle: {
+                        width: 2,
+                        color: 'black',
+                    }
+                },
+                axisLabel: {
+                    fontSize: 18,
+                    showMaxLabel: false,
+                    showMinLabel: false,
+                },
+            }, {
+                position: 'top',
+                type: 'value',
+                scale: true,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        type: 'dashed',
+                        color: '#848484',
+                    }
+                },
+                axisLine: {
+                    onZero: false,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    },
+                },
+                axisTick: {
+                    show: true,
+                    inside: true,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    }
+                },
+            }],
+            yAxis: [{
+                type: 'value',
+                position: 'left',
+                scale: true,
+                name: 'Polarization (C/m^2)',
+                nameLocation: 'center',
+                nameTextStyle: {
+                    fontFamily: 'Arial',
+                    color: 'black',
+                    fontWeight: 'bold',
+                    fontSize: 25,
+                    lineHeight: 110,
+                },
+                splitNumber: 10,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        type: 'dashed',
+                        color: '#848484',
+                    },
+                },
+                axisLine: {
+                    onZero: false,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    },
+                },
+                axisTick: {
+                    show: true,
+                    inside: true,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    }
+                },
+                minorTick: {
+                    show: true,
+                    splitNumber: 2,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    }
+                },
+                axisLabel: {
+                    fontSize: 18,
+                    showMaxLabel: false,
+                    showMinLabel: false,
+                },
+            }, {
+                type: 'value',
+                position: 'right',
+                scale: true,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        type: 'dashed',
+                        color: '#848484',
+                    },
+                },
+                axisLine: {
+                    onZero: false,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    },
+                },
+                axisTick: {
+                    show: true,
+                    inside: true,
+                    lineStyle: {
+                        width: 2.5,
+                        color: 'black',
+                    }
+                },
+            }],
+        };
+        doc.onclick = () => {
+            totalPE_array = []
+            let arr = dialog.showOpenDialogSync({
+                title: '请选择需要转化的文件',
+                buttonLabel: '确定',
+                properties: ['openFile', 'multiSelections']
+            })
+            if (arr != null && arr != "" && arr != undefined) {
+                arr.forEach(getPEValue)
+                alert('创建文件成功！')
+            }
+        }
+        img1.onclick = () => {
+            totalPE_array = []
+            let arr = dialog.showOpenDialogSync({
+                title: '请选择需要绘制的文件',
+                buttonLabel: '确定',
+                properties: ['openFile', 'multiSelections']
+            })
+            if (arr != null && arr != "" && arr != undefined) {
+                arr.forEach(getPEValue)
+                arr.forEach(getTotalArray)
+            }
+            if (myChart != null && myChart != "" && myChart != undefined) {
+                myChart.dispose()
+            }
+            myChart = echarts.init(main)
+            let series = []
+            for (let i = 0; i < totalPE_array.length; i++) {
+                series.push({
+                    symbol: 'none',
+                    data: totalPE_array[i],
+                    type: 'line',
+                    lineStyle: {
+                        normal: {
+                            width: 3,
+                            type: ''
+                        }
+                    }
+                })
+            }
+            let option1 = option
+            option1.xAxis[0].max = function (value) {
+                return (value.max - value.min) * 0.12 + value.max
+            }
+            option1.xAxis[0].min = function (value) {
+                return -((value.max - value.min) * 0.12 + value.max)
+            }
+            option1.yAxis[0].max = function (value) {
+                return (value.max - value.min) * 0.12 + value.max
+            }
+            option1.yAxis[0].min = function (value) {
+                return -((value.max - value.min) * 0.12 + value.max)
+            }
+            option1.series = series
+            myChart.setOption(option1);
+        }
+        img2.onclick = () => {
+            totalPE_array = []
+            let arr = dialog.showOpenDialogSync({
+                title: '请选择需要转化的文件',
+                buttonLabel: '确定',
+                properties: ['openFile', 'multiSelections']
+            })
+            if (arr != null && arr != "" && arr != undefined) {
+                arr.forEach(getPEValue)
+                arr.forEach(getTotalArray)
+            }
+            if (myChart != null && myChart != "" && myChart != undefined) {
+                myChart.dispose()
+            }
+            myChart = echarts.init(main)
+            let series = []
+            for (let i = 0; i < totalPE_array.length; i++) {
+                series.push({
+                    symbol: 'none',
+                    data: totalPE_array[i],
+                    type: 'line',
+                    lineStyle: {
+                        normal: {
+                            width: 3,
+                            type: ''
+                        }
+                    }
+                })
+            }
+            let option2 = option
+            option2.xAxis[0].max = 160
+            option2.xAxis[0].min = -160
+            option2.yAxis[0].max = 0.15
+            option2.yAxis[0].min = -0.15
+            option2.series = series
+            myChart.setOption(option2);
+        }
+        document.onkeyup = function () {
+            if (myChart != null && myChart != "" && myChart != undefined) {
+                myChart.dispose()
+            }
+            if (event.keyCode === 77) {
+                totalPE_array = []
+                let arr = dialog.showOpenDialogSync({
+                    title: '请选择需要转化的文件',
+                    buttonLabel: '确定',
+                    properties: ['openFile', 'multiSelections']
+                })
+                if (arr != null && arr != "" && arr != undefined) {
+                    arr.forEach(getPEValue)
+                    arr.forEach(getTotalArray)
+                }
+                myChart = echarts.init(main)
+                let series = []
+                for (let i = 0; i < totalPE_array.length; i++) {
+                    series.push({
+                        symbol: 'none',
+                        data: totalPE_array[i],
+                        type: 'line',
+                        lineStyle: {
+                            normal: {
+                                width: 3,
+                                type: ''
+                            }
+                        }
+                    })
+                }
+                let option3 = option
+                option3.yAxis[0].axisLabel.showMaxLabel = true
+                option3.yAxis[0].axisLabel.showMinLabel = true
+                option3.xAxis[0].splitNumber = 4
+                option3.xAxis[0].max = 110
+                option3.xAxis[0].min = -110
+                option3.yAxis[0].max = 0.1
+                option3.yAxis[0].min = -0.1
+                option3.series = series
+                myChart.setOption(option3);
+            }
+        }
+        // hide.onclick = () => {
+        //     splitFlag = !splitFlag
+        //     myChart.setOption(option, true);
+        // }
+        close.onclick = () => {
+            if (myChart != null && myChart != "" && myChart != undefined) {
+                myChart.dispose()
+            }
+        }
+        // kt.onclick = () => {
+        //     [tArray, fArray, lossArray, kArray, t102Array, loss102Array, k102Array, t103Array, loss103Array, k103Array, t104Array, loss104Array, k104Array, t105Array, loss105Array, k105Array, t106Array, loss106Array, k106Array] = [
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         [],
+        //         []
+        //     ]
+        //     let ktDoc = dialog.showOpenDialogSync({
+        //         title: '请选择需要转化的文件',
+        //         buttonLabel: '确定',
+        //         properties: ['openFile', 'multiSelections']
+        //     })
+        //     getKtValue(ktDoc)
+        //     getKtArray(ktDoc)
+        // }
+
+        function getPEValue(dirname) {
+            let p = dirname.lastIndexOf('\\')
+            let dirname2 = dirname.substring(0, p + 1) + 'origin-' + dirname.substring(p + 1, dirname.length)
+            let array = fs.readFileSync(dirname).toString().split('\n');
+            let [E_array, P_array, PE_array] = [
+                [],
+                [],
+                [],
+            ]
+            for (let i = 2; i < array.length - 1; i++) {
+                E_array[i - 2] = parseFloat(array[i].toString().split('\t')[1])
+                P_array[i - 2] = parseFloat(array[i].toString().split('\t')[2])
+            }
+            let arv = (Math.max(...P_array) * 1e7 + Math.min(...P_array) * 1e7) / 2 / 1e7
+            P_array = P_array.map(item => item - arv)
+            for (let i = 0; i < P_array.length; i++) {
+                PE_array[i] = [E_array[i] / 1000000, P_array[i]]
+            }
+            let PE_str = PE_array.join('\n')
+            fs.writeFile(dirname2, 'Electric Field, Polarization' + '\n' + 'MV/m, C/m^2' + '\n' + PE_str, function (err) {
+                if (err) {
+                    return console.error(err);
+                }
+            });
+        }
+
+        function getTotalArray(dirname) {
+            let array = fs.readFileSync(dirname).toString().split('\n');
+            let [E_array, P_array, PE_array] = [
+                [],
+                [],
+                [],
+            ]
+            for (let i = 2; i < array.length - 1; i++) {
+                E_array[i - 2] = parseFloat(array[i].toString().split('\t')[1])
+                P_array[i - 2] = parseFloat(array[i].toString().split('\t')[2])
+            }
+            let arv = (Math.max(...P_array) * 1e7 + Math.min(...P_array) * 1e7) / 2 / 1e7
+            P_array = P_array.map(item => item - arv)
+            for (let i = 0; i < P_array.length; i++) {
+                PE_array[i] = [E_array[i] / 1000000, P_array[i]]
+            }
+            totalPE_array.push(PE_array)
+        }
+
+        function getKtArray(dirname) {
+            let array = fs.readFileSync(dirname).toString().split()
+        }
+    </script>
+</body>
+
+</html>
